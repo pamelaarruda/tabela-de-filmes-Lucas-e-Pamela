@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tabela de Filmes</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        form input,
+        form textarea,
+        form button {
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+            background-color: #1e1e1e;
+            color: #fff;
+        }
+
+        form input[type="text"],
+        form input[type="number"],
+        form input[type="date"] {
+            width: 15%;
+            min-width: 120px;
+        }
+
+        form textarea {
+            width: 30%;
+            height: 40px;
+            resize: vertical;
+        }
+
+        form button {
+            background-color: #6200ea;
+            min-width: 140px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-left: auto;
+        }
+
+        form button:hover {
+            background-color: #3700b3;
+        }
+
+        #filterControls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        #filterControls input,
+        #filterControls button {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+            background-color: #1e1e1e;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            min-width: 150px;
+        }
+
+        #filterControls button:hover {
+            background-color: #3700b3;
+        }
+
+        #filmTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border: 1px solid #333;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: #1e1e1e;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        button.actionBtn {
+            padding: 6px 10px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.25s ease;
+        }
+
+        button.editBtn {
+            background-color: #0288d1;
+            color: white;
+        }
+
+        button.editBtn:hover {
+            background-color: #015e9e;
+        }
+
+        button.deleteBtn {
+            background-color: #d32f2f;
+            color: white;
+        }
+
+        button.deleteBtn:hover {
+            background-color: #9a1f1f;
+        }
+
+        #averageRatings {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 700px) {
+            form input[type="text"],
+            form input[type="number"],
+            form input[type="date"],
+            form textarea {
+                width: 100%;
+                min-width: unset;
+            }
+            form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            #filterControls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            #filterControls input,
+            #filterControls button {
+                width: 100%;
+                min-width: unset;
+            }
+            button.actionBtn {
+                width: 48%;
+                margin-top: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tabela de Filmes</h1>
+        <form id="filmForm">
+            <input type="text" id="filmName" placeholder="Nome do Filme" required autocomplete="off" />
+            <input type="number" id="myRating" placeholder="Minha Nota" min="0" max="10" step="0.1" required autocomplete="off" />
+            <input type="number" id="lucasRating" placeholder="Nota do Lucas" min="0" max="10" step="0.1" required autocomplete="off" />
+            <input type="date" id="filmDate" required />
+            <textarea id="comment" placeholder="Comentário"></textarea>
+            <button type="submit" id="submitButton">Adicionar Filme</button>
+        </form>
+
+        <div id="filterControls">
+            <input type="number" id="filterRating" placeholder="Mostrar filmes com minha nota >" min="0" max="10" step="0.1" autocomplete="off" />
+            <button id="filterButton">Filtrar</button>
+            <button id="clearFilterButton">Limpar Filtro</button>
+            <button id="sortButton">Ordenar por Média</button>
+        </div>
+
+        <table id="filmTable" aria-label="Tabela de filmes">
+            <thead>
+                <tr>
+                    <th>Nome do Filme</th>
+                    <th>Minha Nota</th>
+                    <th>Nota do Lucas</th>
+                    <th>Data</th>
+                    <th>Comentário</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody><!-- Linhas aqui --></tbody>
+        </table>
+
+        <div id="averageRatings">
+            <p>Média Geral das Minhas Notas: <span id="myAverage">0</span></p>
+            <p>Média Geral das Notas do Lucas: <span id="lucasAverage">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            const filmForm = document.getElementById('filmForm');
+            const tbody = document.querySelector('#filmTable tbody');
+            const myAverageSpan = document.getElementById('myAverage');
+            const lucasAverageSpan = document.getElementById('lucasAverage');
+            const filterButton = document.getElementById('filterButton');
+            const clearFilterButton = document.getElementById('clearFilterButton');
+            const sortButton = document.getElementById('sortButton');
+            const filterInput = document.getElementById('filterRating');
+            const submitButton = document.getElementById('submitButton');
+
+            let films = [];
+            let isEditing = false;
+            let editingIndex = -1;
+
+            // Renderiza uma linha da tabela sem salvar no localStorage
+            function renderFilmRow(film, index) {
+                const tr = document.createElement('tr');
+                tr.dataset.index = index;
+
+                tr.innerHTML = `
+                    <td>${escapeHtml(film.name)}</td>
+                    <td>${film.myRating.toFixed(1)}</td>
+                    <td>${film.lucasRating.toFixed(1)}</td>
+                    <td>${film.date}</td>
+                    <td>${escapeHtml(film.comment)}</td>
+                    <td>
+                        <button class="actionBtn editBtn" aria-label="Editar ${escapeHtml(film.name)}" type="button">Editar</button>
+                        <button class="actionBtn deleteBtn" aria-label="Excluir ${escapeHtml(film.name)}" type="button">Excluir</button>
+                    </td>
+                `;
+
+                // Liga eventos Editar e Excluir
+                tr.querySelector('.editBtn').addEventListener('click', () => {
+                    startEditFilm(index);
+                });
+
+                tr.querySelector('.deleteBtn').addEventListener('click', () => {
+                    deleteFilm(index);
+                });
+
+                return tr;
+            }
+
+            // Escapa html para evitar injeção simples
+            function escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;',
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+
+            // Atualiza toda a tabela (re-renderiza todas as linhas)
+            function refreshTable(showFiltered = false) {
+                tbody.innerHTML = '';
+                let filmsToShow = films;
+
+                if (showFiltered) {
+                    const minRating = parseFloat(filterInput.value);
+                    if (!isNaN(minRating)) {
+                        filmsToShow = films.filter(f => f.myRating > minRating);
+                    }
+                }
+
+                filmsToShow.forEach((film, idx) => {
+                    tbody.appendChild(renderFilmRow(film, idx));
+                });
+
+                updateAverages();
+            }
+
+            // Atualiza as médias
+            function updateAverages() {
+                if (films.length === 0) {
+                    myAverageSpan.textContent = '0';
+                    lucasAverageSpan.textContent = '0';
+                    return;
+                }
+
+                const sumMy = films.reduce((acc, f) => acc + f.myRating, 0);
+                const sumLucas = films.reduce((acc, f) => acc + f.lucasRating, 0);
+                myAverageSpan.textContent = (sumMy / films.length).toFixed(2);
+                lucasAverageSpan.textContent = (sumLucas / films.length).toFixed(2);
+            }
+
+            // Salva films no localStorage
+            function saveToLocalStorage() {
+                localStorage.setItem('films', JSON.stringify(films));
+            }
+
+            // Carrega films do localStorage
+            function loadFromLocalStorage() {
+                const stored = localStorage.getItem('films');
+                if (stored) {
+                    try {
+                        films = JSON.parse(stored);
+                    } catch {
+                        films = [];
+                    }
+                }
+            }
+
+            // Adiciona novo filme
+            function addFilm(film) {
+                films.push(film);
+                saveToLocalStorage();
+                refreshTable();
+            }
+
+            // Atualiza filme editado
+            function updateFilm(index, film) {
+                films[index] = film;
+                saveToLocalStorage();
+                refreshTable();
+            }
+
+            // Exclui filme
+            function deleteFilm(index) {
+                if (confirm(`Deseja realmente excluir o filme "${films[index].name}"?`)) {
+                    films.splice(index, 1);
+                    saveToLocalStorage();
+                    refreshTable();
+                    if (isEditing && editingIndex === index) {
+                        resetForm();
+                    }
+                }
+            }
+
+            // Inicia edição
+            function startEditFilm(index) {
+                const film = films[index];
+                document.getElementById('filmName').value = film.name;
+                document.getElementById('myRating').value = film.myRating;
+                document.getElementById('lucasRating').value = film.lucasRating;
+                document.getElementById('filmDate').value = film.date;
+                document.getElementById('comment').value = film.comment;
+                submitButton.textContent = 'Salvar Alterações';
+                isEditing = true;
+                editingIndex = index;
+            }
+
+            // Reseta formulário de edição
+            function resetForm() {
+                filmForm.reset();
+                submitButton.textContent = 'Adicionar Filme';
+                isEditing = false;
+                editingIndex = -1;
+            }
+
+            // Filtra filmes com base na nota
+            function filterFilms() {
+                refreshTable(true);
+            }
+
+            // Limpa filtro
+            function clearFilter() {
+                filterInput.value = '';
+                refreshTable();
+            }
+
+            // Ordena filmes por média das notas
+            function sortFilms() {
+                films.sort((a, b) => {
+                    const avgA = (a.myRating + a.lucasRating) / 2;
+                    const avgB = (b.myRating + b.lucasRating) / 2;
+                    return avgB - avgA;
+                });
+                saveToLocalStorage();
+                refreshTable();
+            }
+
+            // Validar entradas
+            function validateInputs() {
+                const name = document.getElementById('filmName').value.trim();
+                const myRating = parseFloat(document.getElementById('myRating').value);
+                const lucasRating = parseFloat(document.getElementById('lucasRating').value);
+                const date = document.getElementById('filmDate').value;
+
+                if (name === '') {
+                    alert('O nome do filme não pode estar vazio.');
+                    return false;
+                }
+                if (isNaN(myRating) || myRating < 0 || myRating > 10) {
+                    alert('Minha Nota deve ser um número entre 0 e 10.');
+                    return false;
+                }
+                if (isNaN(lucasRating) || lucasRating < 0 || lucasRating > 10) {
+                    alert('Nota do Lucas deve ser um número entre 0 e 10.');
+                    return false;
+                }
+                if (!date) {
+                    alert('Informe a data do filme.');
+                    return false;
+                }
+                return true;
+            }
+
+            // Evento submit do formulário
+            filmForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!validateInputs()) return;
+
+                const film = {
+                    name: document.getElementById('filmName').value.trim(),
+                    myRating: parseFloat(document.getElementById('myRating').value),
+                    lucasRating: parseFloat(document.getElementById('lucasRating').value),
+                    date: document.getElementById('filmDate').value,
+                    comment: document.getElementById('comment').value.trim(),
+                };
+
+                if (isEditing) {
+                    updateFilm(editingIndex, film);
+                } else {
+                    addFilm(film);
+                }
+                resetForm();
+            });
+
+            filterButton.addEventListener('click', filterFilms);
+            clearFilterButton.addEventListener('click', clearFilter);
+            sortButton.addEventListener('click', sortFilms);
+
+            // Inicialização
+            loadFromLocalStorage();
+            refreshTable();
+        })();
+    </script>
+</body>
+</html>
+
