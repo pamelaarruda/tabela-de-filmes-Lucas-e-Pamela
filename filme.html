@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela de Filmes</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        input, textarea, button {
+            margin: 5px 0;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+        }
+
+        input, textarea {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+
+        button {
+            background-color: #6200ea;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3700b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #333;
+            text-align: left;
+        }
+
+        th {
+            background-color: #1e1e1e;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        #averageRatings {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            form {
+                flex-direction: column;
+            }
+
+            input, textarea, button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tabela de Filmes</h1>
+        <form id="filmForm">
+            <input type="text" id="filmName" placeholder="Nome do Filme" required>
+            <input type="number" id="myRating" placeholder="Minha Nota" min="0" max="10" required>
+            <input type="number" id="lucasRating" placeholder="Nota do Lucas" min="0" max="10" required>
+            <input type="date" id="filmDate" required>
+            <textarea id="comment" placeholder="Comentário"></textarea>
+            <button type="submit">Adicionar Filme</button>
+        </form>
+        <input type="number" id="filterRating" placeholder="Filtrar por minha nota > 8" min="0" max="10">
+        <button id="filterButton">Filtrar</button>
+        <button id="sortButton">Ordenar por Média</button>
+        <table id="filmTable">
+            <thead>
+                <tr>
+                    <th>Nome do Filme</th>
+                    <th>Minha Nota</th>
+                    <th>Nota do Lucas</th>
+                    <th>Data</th>
+                    <th>Comentário</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Linhas de filmes serão adicionadas aqui -->
+            </tbody>
+        </table>
+        <div id="averageRatings">
+            <p>Média Geral das Minhas Notas: <span id="myAverage">0</span></p>
+            <p>Média Geral das Notas do Lucas: <span id="lucasAverage">0</span></p>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const filmForm = document.getElementById('filmForm');
+            const filmTable = document.getElementById('filmTable').getElementsByTagName('tbody')[0];
+            const myAverage = document.getElementById('myAverage');
+            const lucasAverage = document.getElementById('lucasAverage');
+            const filterButton = document.getElementById('filterButton');
+            const sortButton = document.getElementById('sortButton');
+            const filterRating = document.getElementById('filterRating');
+
+            // Carregar filmes do LocalStorage
+            loadFilms();
+
+            filmForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const filmName = document.getElementById('filmName').value;
+                const myRating = parseFloat(document.getElementById('myRating').value);
+                const lucasRating = parseFloat(document.getElementById('lucasRating').value);
+                const filmDate = document.getElementById('filmDate').value;
+                const comment = document.getElementById('comment').value;
+
+                if (filmName.trim() === '') {
+                    alert('O nome do filme não pode estar vazio.');
+                    return;
+                }
+
+                addFilm(filmName, myRating, lucasRating, filmDate, comment);
+                filmForm.reset();
+            });
+
+            filterButton.addEventListener('click', () => {
+                const filterValue = parseFloat(filterRating.value);
+                filterFilms(filterValue);
+            });
+
+            sortButton.addEventListener('click', () => {
+                sortFilms();
+            });
+
+            function addFilm(name, myRating, lucasRating, date, comment) {
+                const newRow = filmTable.insertRow();
+                newRow.innerHTML = `
+                    <td>${name}</td>
+                    <td>${myRating}</td>
+                    <td>${lucasRating}</td>
+                    <td>${date}</td>
+                    <td>${comment}</td>
+                `;
+                saveFilmToLocalStorage(name, myRating, lucasRating, date, comment);
+                updateAverages();
+            }
+
+            function saveFilmToLocalStorage(name, myRating, lucasRating, date, comment) {
+                const films = JSON.parse(localStorage.getItem('films')) || [];
+                films.push({ name, myRating, lucasRating, date, comment });
+                localStorage.setItem('films', JSON.stringify(films));
+            }
+
+            function loadFilms() {
+                const films = JSON.parse(localStorage.getItem('films')) || [];
+                films.forEach(film => {
+                    addFilm(film.name, film.myRating, film.lucasRating, film.date, film.comment);
+                });
+                updateAverages();
+            }
+
+            function filterFilms(minRating) {
+                const rows = filmTable.getElementsByTagName('tr');
+                for (let i = 0; i < rows.length; i++) {
+                    const myRating = parseFloat(rows[i].cells[1].innerText);
+                    rows[i].style.display = myRating > minRating ? '' : 'none';
+                }
+            }
+
+            function sortFilms() {
+                const rows = Array.from(filmTable.rows);
+                rows.sort((a, b) => {
+                    const myRatingA = parseFloat(a.cells[1].innerText);
+                    const lucasRatingA = parseFloat(a.cells[2].innerText);
+                    const myRatingB = parseFloat(b.cells[1].innerText);
+                    const lucasRatingB = parseFloat(b.cells[2].innerText);
+                    const averageA = (myRatingA + lucasRatingA) / 2;
+                    const averageB = (myRatingB + lucasRatingB) / 2;
+                    return averageB - averageA; // Ordenar do maior para o menor
+                });
+                rows.forEach(row => filmTable.appendChild(row));
+            }
+
+            function updateAverages() {
+                const films = JSON.parse(localStorage.getItem('films')) || [];
+                const myRatings = films.map(film => film.myRating);
+                const lucasRatings = films.map(film => film.lucasRating);
+                const myAverageValue = myRatings.length ? (myRatings.reduce((a, b) => a + b) / myRatings.length).toFixed(2) : 0;
+                const lucasAverageValue = lucasRatings.length ? (lucasRatings.reduce((a, b) => a + b) / lucasRatings.length).toFixed(2) : 0;
+                myAverage.innerText = myAverageValue;
+                lucasAverage.innerText = lucasAverageValue;
+            }
+        });
+    </script>
+</body>
+</html>
